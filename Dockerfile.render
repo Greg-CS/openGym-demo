@@ -1,0 +1,58 @@
+# Combined image for Render / single-container hosting.
+# Runs the Node API on 127.0.0.1:3000 and nginx on port 80, with nginx
+# proxying /api to the local API process — no Docker Compose service name needed.
+#
+# Based on the original multi-stage Dockerfile + api/Dockerfile, merged into one
+# container so platforms that only run a single service (Render, Fly.io, etc.)
+# can host the full app without a separate API host.
+
+# ---- Stage 1: build the React frontend ----
+# VITE_IMG_BASE / VITE_GIF_BASE point exercise media to a CDN instead of the
+# local /img and /gif paths that the Docker Compose setup serves from a volume.
+# This avoids needing a media volume on single-container hosts (Render, Fly).
+FROM --platform=$BUILDPLATFORM node:22-alpine AS build
+WORKDIR /app
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm ci 2>/dev/null || npm install
+COPY frontend/ ./
+ENV VITE_IMG_BASE=https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@7455efae41b330c265e7cd4b78dfa848e7ce5ebd/images/
+ENV VITE_GIF_BASE=https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@7455efae41b330c265e7cd4b78dfa848e7ce5ebd/videos/
+RUN npm run build
+
+# ---- Stage 2: install the API deps ----
+FROM node:22-alpine AS api-deps
+WORKDIR /api
+COPY api/package.json api/package-lock.json* ./
+RUN npm install --omit=dev && npm cache clean --force
+
+# ---- Stage 3: final image (nginx + Node API) ----
+FROM node:22-alpine
+
+# Install nginx + gettext (for envsubst, used to template $PORT into the config)
+RUN apk add --no-cache nginx gettext
+
+# nginx config as a template — render-start.sh runs envsubst to inject $PORT
+COPY render-nginx.conf /etc/nginx/http.d/default.conf.template
+# Remove the default nginx config so ours is the only one
+RUN rm -f /etc/nginx/http.d/default.conf
+
+# Frontend static files
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# API code + deps
+WORKDIR /api
+COPY --from=api-deps /api/node_modules ./node_modules
+COPY api/server.js ./
+
+ENV NODE_ENV=production
+ENV DATA_DIR=/data
+# The API listens on a fixed internal port (3000), NOT $PORT — Render injects
+# PORT for the public listener (nginx), and the API must not use it.
+ENV API_PORT=3000
+RUN mkdir -p /data
+COPY render-start.sh /render-start.sh
+RUN chmod +x /render-start.sh
+
+EXPOSE 10000
+
+CMD ["/render-start.sh"]

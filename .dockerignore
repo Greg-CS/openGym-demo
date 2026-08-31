@@ -1,0 +1,13 @@
+data/
+media/
+node_modules/
+frontend/node_modules/
+api/node_modules/
+.git/
+.DS_Store
+*.md
+.env
+.env.example
+assets/
+website/
+docs/

@@ -2,5 +2,16 @@ services:
   - type: web
     name: opengym
     env: docker
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: ./Dockerfile.render
     dockerContext: .
+    envVars:
+      - key: RP_ID
+        sync: false
+      - key: ORIGIN
+        sync: false
+      - key: RP_NAME
+        value: openGym
+    disk:
+      name: opengym-data
+      mountPath: /data
+      sizeGB: 1
