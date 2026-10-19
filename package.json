@@ -1,0 +1,1 @@
+{"description":"openGym — self-hosted gym & body-weight tracker. npm workspaces monorepo.","license":"AGPL-3.0-only","name":"opengym","private":true,"scripts":{"convex:deploy":"npm run deploy --workspace=@opengym/convex","convex:dev":"npm run dev --workspace=@opengym/convex"},"version":"0.1.0","workspaces":["frontend","api","packages/*"]}
