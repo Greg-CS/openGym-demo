@@ -1,0 +1,1 @@
+{"dependencies":{"convex":"^1.42.3"},"description":"openGym Convex backend — database + functions, organized by domain (DDD bounded contexts).","devDependencies":{"typescript":"^5"},"name":"@opengym/convex","private":true,"scripts":{"deploy":"convex deploy","dev":"convex dev"},"type":"module","version":"0.1.0"}
